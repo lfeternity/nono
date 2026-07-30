@@ -275,8 +275,10 @@ standalone\bin\Release\net48\NoNo-Standalone.exe
 
 ## 参与项目
 
-普通缺陷和功能建议可以通过 [GitHub Issues](https://github.com/lfeternity/nono/issues) 提交。提交前请移除日志、截图和配置文件中的个人信息、API 密钥与本机路径。
+普通缺陷和功能建议可以通过 [GitHub Issues](https://github.com/lfeternity/nono/issues) 提交。准备代码或资源贡献前，请阅读[贡献指南](CONTRIBUTING.md)。提交日志、截图和配置文件前，请移除个人信息、API 密钥与本机路径。
 
 ## 许可证
 
-当前仓库尚未附带开源许可证。除非获得维护者明确授权，请不要默认拥有复制、修改或再分发本项目的权利。
+本项目采用 [MIT License](LICENSE) 开源，可以自由使用、复制、修改和分发，但必须保留许可证和版权声明。
+
+仓库中带有独立许可证或版权声明的第三方代码与资料，继续遵循其各自的授权条款。
