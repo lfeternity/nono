@@ -1,345 +1,282 @@
-# 诺诺（NoNo / nono）中文说明
+# 诺诺（NoNo）
 
-诺诺（英文名 NoNo，也可以叫 nono）是一只为 Codex Desktop 制作的自定义电子宠物。它是一个漂浮在编辑器旁边的小型 AI 编程伙伴：白色圆润机身、黑色屏幕脸、青蓝色发光眼睛、兔耳式能量天线，以及轻量、安静、带一点保护感的陪伴气质。
+> 一只会陪你写代码、跟随 Codex 工作状态的 Windows 桌面电子宠物。
 
-它的目标不是做一个吵闹的吉祥物，而是在写代码、等待 Codex、检查结果、遇到失败时，用小幅度动画给出清晰的状态反馈。
+[下载最新版本](https://github.com/lfeternity/nono/releases/latest) · [查看 v1.0.2](https://github.com/lfeternity/nono/releases/tag/v1.0.2) · [安全策略](https://github.com/lfeternity/nono/security/policy)
 
-## 下载
+![诺诺动作总览](run-nono/qa/contact-sheet.png)
 
-- [最新版本](https://github.com/lfeternity/nono/releases/latest)
-- [NoNo v1.0.2 Windows x64 安装包](https://github.com/lfeternity/nono/releases/download/v1.0.2/NoNo-Desktop-Pet-1.0.2-x64.msi)
+诺诺是一只为 Codex Desktop 和 Windows 开发环境设计的轻量桌面伙伴。它拥有白色圆润机身、黑色屏幕脸、青蓝色发光眼睛和兔耳式能量天线，会根据空闲、运行、等待、审阅和失败等状态切换动画。
+
+除了作为 Codex 自定义宠物使用，项目还提供独立 Windows 桌宠、Codex 状态联动、本地语音对话，以及带安全边界的电脑助手功能。
+
+## 主要功能
+
+- **九种动画状态**：覆盖空闲、移动、招手、跳跃、失败、等待、运行和审阅。
+- **独立 Windows 桌宠**：支持拖动、右键菜单、动作切换、设置面板和单实例运行。
+- **Codex 状态联动**：读取状态桥接文件，并在没有状态文件时进行保守的进程状态判断。
+- **本地语音助手**：使用 Qwen3-ASR、Silero VAD、Kokoro TTS 和可选的本地 Ollama 对话模型。
+- **电脑助手**：结合 Windows UI Automation、受控系统工具和 Codex App Server 完成明确授权的电脑任务。
+- **隐私与安全控制**：敏感字段脱敏、危险操作拦截、确认机制、紧急停止和本地凭据加密。
 
 ## 预览
 
-### 动作总览
-
-![NoNo contact sheet](run-nono/qa/contact-sheet.png)
-
-### 代表动作
-
 | 空闲 | 处理中 | 等待输入 |
 | --- | --- | --- |
-| ![idle](run-nono/qa/previews/idle.gif) | ![running](run-nono/qa/previews/running.gif) | ![waiting](run-nono/qa/previews/waiting.gif) |
+| ![空闲](run-nono/qa/previews/idle.gif) | ![处理中](run-nono/qa/previews/running.gif) | ![等待输入](run-nono/qa/previews/waiting.gif) |
 
 | 招手 | 跳跃 | 失败 |
 | --- | --- | --- |
-| ![waving](run-nono/qa/previews/waving.gif) | ![jumping](run-nono/qa/previews/jumping.gif) | ![failed](run-nono/qa/previews/failed.gif) |
+| ![招手](run-nono/qa/previews/waving.gif) | ![跳跃](run-nono/qa/previews/jumping.gif) | ![失败](run-nono/qa/previews/failed.gif) |
 
-如果想一次性查看所有动作，可以直接打开：
+完整动作画廊位于 [`run-nono/qa/action-gallery.html`](run-nono/qa/action-gallery.html)。
+
+## 下载与安装
+
+### 使用 Windows 安装包
+
+推荐普通用户直接安装最新的 MSI：
+
+- [NoNo v1.0.2 Windows x64 安装包](https://github.com/lfeternity/nono/releases/download/v1.0.2/NoNo-Desktop-Pet-1.0.2-x64.msi)
+- 文件大小：约 2.71 MB
+- SHA-256：`7646949FE48E71E29878EC718E3E001104C8F4374E9E930A14552FDA15D1B38B`
+
+安装要求：
+
+- Windows 10 或 Windows 11，x64 系统
+- .NET Framework 4.8 或更高版本
+
+安装完成后，从开始菜单或桌面快捷方式启动 `NoNo Desktop Pet`。安装程序为当前用户安装，不要求写入系统级程序目录。
+
+### 作为 Codex 自定义宠物安装
+
+仓库中的 [`nono`](nono) 目录包含可直接使用的宠物资源：
 
 ```text
-run-nono/qa/action-gallery.html
+nono/
+  avatar.json
+  pet.json
+  spritesheet.webp
 ```
+
+当前 Codex Desktop 通常读取：
+
+```text
+%USERPROFILE%\.codex\avatars\nono\
+  avatar.json
+  spritesheet.webp
+```
+
+旧版或兼容模式可能读取：
+
+```text
+%USERPROFILE%\.codex\pets\nono\
+  pet.json
+  spritesheet.webp
+```
+
+复制完成后，重启 Codex Desktop，或在设置中刷新自定义宠物列表。
+
+## 动画状态
+
+精灵图尺寸为 `1536 x 1872`，使用 `192 x 208` 的单元格布局。
+
+| 行 | 状态 | 用途 |
+| --- | --- | --- |
+| 0 | `idle` | 默认待机和轻微漂浮 |
+| 1 | `running-right` | 向右移动或被向右拖动 |
+| 2 | `running-left` | 向左移动或被向左拖动 |
+| 3 | `waving` | 招手和问候 |
+| 4 | `jumping` | 跳跃和积极反馈 |
+| 5 | `failed` | 失败或错误反馈 |
+| 6 | `waiting` | 等待用户输入 |
+| 7 | `running` | Codex 正在处理任务 |
+| 8 | `review` | 检查、审阅或提交前确认 |
+
+最终精灵图位于 [`run-nono/final/spritesheet.webp`](run-nono/final/spritesheet.webp)，验证结果位于 [`run-nono/final/validation.json`](run-nono/final/validation.json)。
 
 ## Codex 状态联动
 
-`NoNo-Standalone.exe` 现在可以自动查看 Codex 的执行状态并切换动作。右键桌宠打开 `Codex 状态`，或在面板的 `设置` 页中开启/关闭 `自动跟随`。
+在桌宠右键菜单中打开 `Codex 状态`，或在设置面板中启用 `自动跟随`。程序会优先读取以下状态文件：
 
-- 优先读取状态桥接文件：`%APPDATA%\NoNoStandalone\codex-status.txt`、`%APPDATA%\NoNoStandalone\codex-status.json`、`%USERPROFILE%\.codex\codex-status.txt/json`，以及当前目录 `.codex\status.txt/json`。
-- 状态值支持 `idle`、`running`、`waiting`、`review`、`failed`；JSON 可使用 `state`、`status`、`phase`、`activity` 或 `codexState` 字段。
-- 没有状态文件时，会根据本机 Codex 相关进程做保守推断：`codex-command-runner` 表示 `running`，Codex 窗口在前台表示 `waiting`，仅检测到 Codex 打开时保持 `idle`。
-- 右键 `动作` 菜单和设置页的宠物动作按钮覆盖 hatch-pet 的 9 个标准状态：`idle`、`running-right`、`running-left`、`waving`、`jumping`、`failed`、`waiting`、`running`、`review`。
+```text
+%APPDATA%\NoNoStandalone\codex-status.txt
+%APPDATA%\NoNoStandalone\codex-status.json
+%USERPROFILE%\.codex\codex-status.txt
+%USERPROFILE%\.codex\codex-status.json
+当前目录\.codex\status.txt
+当前目录\.codex\status.json
+```
 
-## 本地语音对话
+文本文件可以直接写入状态名：
 
-独立桌宠支持全本地语音对话。右键宠物打开 `语音助手`，启用后可以说 `nono`、`诺诺` 或 `你好 nono`，也可以点击 `现在说话`。
+```text
+running
+```
+
+JSON 文件支持 `state`、`status`、`phase`、`activity` 或 `codexState` 字段：
+
+```json
+{
+  "state": "waiting"
+}
+```
+
+联动状态支持 `idle`、`running`、`waiting`、`review` 和 `failed`。没有状态文件时，程序只根据本机 Codex 相关进程和前台窗口进行保守判断。
+
+## 本地语音助手
+
+语音功能默认关闭。启用后可以说 `nono`、`诺诺` 或 `你好 nono` 唤醒，也可以从右键菜单点击 `现在说话`。
+
+首次配置需要：
+
+- Python 3.13 和 Windows Python Launcher（`py.exe`）
+- 可用的麦克风权限
+- 下载模型所需的网络连接和磁盘空间
+
+在项目根目录运行：
 
 ```powershell
 .\voice\setup.ps1 -InstallOllama -PullChatModel
+```
+
+脚本会在 `voice` 目录内创建独立虚拟环境，并下载：
+
+- Qwen3-ASR 0.6B 语音识别模型，约 1.9 GB
+- Kokoro v1.1 语音合成模型，约 348 MB
+- 可选的 Ollama 和 `qwen3:4b-instruct-2507-q4_K_M` 对话模型
+
+运行时数据保存在以下本地目录，这些目录不会提交到 Git：
+
+```text
+voice/.venv/
+voice/cache/
+voice/models/
+voice/ollama/
+```
+
+语音音频只在内存中处理，不保存原始录音。未配置云端屏幕模型时，普通语音对话可以完全使用本地模型。
+
+## 电脑助手
+
+电脑助手用于执行范围明确、可验证的 Windows 操作。复杂任务可以交给本机 Codex 规划，再通过诺诺提供的类型化工具执行。
+
+主要能力包括：
+
+- 启动和聚焦应用、管理普通窗口
+- 媒体控制、浏览器打开网址和搜索
+- 读取受支持目录中的文件信息
+- 在确认后执行剪贴板、文件写入、复制、移动或重命名
+- 结合截图和 UI Automation 查看桌面状态
+- 使用 `Ctrl+Alt+Escape` 立即停止当前任务
+
+安全边界包括：
+
+- 支付、转账、购买和下单操作会被阻止
+- 不提供删除文件或清空回收站工具
+- 不读取密码、令牌、私钥等凭据
+- 不修改安全软件、管理员设置或系统安全策略
+- 敏感输入框和凭据相关界面会被脱敏或拒绝处理
+- 状态变更根据设置进入建议或确认流程
+
+电脑助手需要本机已安装并登录 Codex CLI。若启用云端屏幕分析，桌面截图和可见界面信息会发送给用户自行配置的模型服务商；启用前请确认其隐私政策和数据处理方式。
+
+相关实现可查看：
+
+- [`standalone/CodexComputerSafety.cs`](standalone/CodexComputerSafety.cs)
+- [`standalone/CodexComputerPolicy.cs`](standalone/CodexComputerPolicy.cs)
+- [`standalone/CodexComputerTools.cs`](standalone/CodexComputerTools.cs)
+
+## 从源码构建
+
+构建环境：
+
+- Windows x64
+- .NET SDK
+- .NET Framework 4.8 参考程序集
+- PowerShell
+
+构建独立桌宠：
+
+```powershell
 dotnet build .\standalone\NoNoStandalone.csproj -c Release
 ```
 
-- 语音识别：本地 `Qwen3-ASR-0.6B`。
-- 语音活动检测：本地 Silero VAD。
-- 对话：未配置云端屏幕模型时使用项目内 Ollama；屏幕问答使用配置的云端模型，复杂电脑操作使用本机 Codex。
-- 指令联动：明确的停止、确认、宠物动作和简单系统指令走本地快速路径；复杂电脑任务或“用 Codex”指令进入 Codex App Server，再由宠物的受控工具执行。
-- 准确性：否定句、疑问句、转述句和缺少目标的指令不会仅凭关键词执行；低置信度结果会追问。
-- 速度：短语音使用 480ms 结束窗口，唤醒语句使用 620ms，长句自动延长到 680ms；截图和 UI Automation 并行采集。
-- 朗读：CPU 本地运行的 Kokoro v1.1 自然人声，可在语音助手设置中切换 103 个中英文音色，默认 `zf_001`；Windows TTS 仅作故障回退。
-- 隐私：默认关闭；音频仅在内存中处理，不保存、不上传。
-- 安装位置：Python、Ollama、模型和缓存均位于 `voice` 目录。
+输出文件：
 
-首次安装时 Qwen3-ASR 会下载约 1.9GB 权重，Kokoro TTS 约 348MB。右键菜单中的 `Windows 麦克风隐私设置` 可处理系统权限，`设置` 可调整语音指令联动、指令字幕、Ollama 模型、朗读音色、连续追问窗口、朗读速度和字幕时长。
+```text
+standalone\bin\Release\net48\NoNo-Standalone.exe
+```
 
-## 电脑助手与 Codex
-
-右键宠物打开 `电脑助手`。简单操作使用本地快速路径；复杂任务或明确包含“用 Codex”的指令由本机 Codex 规划，再调用宠物提供的类型化电脑工具：
-
-- `查看整个屏幕`：仍使用配置的云端屏幕模型分析多显示器截图和 UI Automation 元素；
-- `操作电脑`：应用启动/聚焦、窗口管理、媒体控制、浏览器、剪贴板、系统设置和电源动作使用可验证的 Windows 能力；复杂任务进入常驻的 `codex app-server --stdio`；
-- 浏览器能力：默认浏览器、Chrome 或 Edge 可以直接打开 HTTP/HTTPS URL，也可以打开 Bing 搜索结果；不操作地址栏，不填写或提交网页表单；
-- 文件能力：只允许 `desktop`、`downloads`、`documents`、`pictures`、`music`、`videos` 六个用户目录，使用相对路径；支持查找、列出、读取和查看信息、新建/追加文本、创建目录、复制、移动、重命名以及打开文件或文件夹；没有删除或回收站工具；
-- 进程能力：可以列出普通进程、通过应用目录启动程序，以及请求有窗口的普通进程正常退出；不会强制结束系统进程；
-- `立即停止`：取消 Codex turn 和后续工具调用；全局快捷键为 `Ctrl+Alt+Escape`；
-- `设置`：控制只读、建议或经确认执行模式，以及低风险操作是否也需要确认。
-
-使用 Codex 电脑任务前需要在本机安装并登录 Codex CLI。宠物不读取或保存 Codex 的 API Key。App Server 按需启动并保持常驻，当前版本仍属于实验性接口；协议不兼容时会明确报错，不会降级为任意 shell。
-
-Codex 始终运行在 `read-only` 沙箱，审批策略为 `never`，额外权限请求会被宿主拒绝。所有电脑状态变更只能通过 `computer_*` 动态工具完成；命令执行或文件补丁事件一旦出现，宠物会中止任务。全流程不使用鼠标坐标、模拟鼠标点击或任意键盘输入。
-
-读取文件或剪贴板内容、写入剪贴板、新建或追加文件、关闭程序、复制、移动、重命名和电源动作需要审批。支付、付款、购买、下单、转账、删除文件、读取凭据、安全软件操作、覆盖文件、重解析点路径和授权目录外路径会被阻止。审计日志只记录工具名、风险、成功状态和消息长度，不记录文件正文、剪贴板正文或凭据。
-
-例如可以说“用 Codex 在 Chrome 打开 `https://example.com`”“搜索 Windows API”“在文档目录新建说明文件”或“把这段文字写入剪贴板”。支付和删除文件类指令会在进入 Codex 前直接拒绝。
-
-构建后可以运行两类自测：
+构建完整 MSI 安装包：
 
 ```powershell
-NoNo-Standalone.exe --self-test
-NoNo-Standalone.exe --codex-computer-self-test
+.\installer\build.ps1
 ```
 
-第二项会真实启动 Codex App Server，让 Codex 调用只读应用列表工具，并确认 Windows 应用目录中可以发现 ToDesk；不会执行任何状态变更。
+脚本会构建桌宠和 WiX 安装器，并将安装包输出到 `release` 目录。WiX SDK 和 .NET Framework 参考程序集会通过 NuGet 自动还原。
 
-安全策略与电脑操作边界可查看 [`standalone/CodexComputerSafety.cs`](standalone/CodexComputerSafety.cs) 和 [`standalone/CodexComputerPolicy.cs`](standalone/CodexComputerPolicy.cs)。
+## 自检
 
-## 角色设定
+桌宠构建完成后，可以运行：
 
-诺诺是一只 Codex 本机电子宠物，定位是“会陪你写代码的小型智能助手”。
-
-- 形象：圆润白色机器人，黑色屏幕脸，青蓝色眼睛
-- 气质：聪明、安静、可靠、轻微调皮
-- 场景：写代码、调试、等待 Codex、测试通过或失败、提交前检查
-- 风格：简洁、未来感、桌面悬浮宠物，不遮挡工作区
-
-## 动作状态
-
-| 行 | 状态 | 含义 |
-| --- | --- | --- |
-| 0 | `idle` | 默认待机，轻微漂浮 |
-| 1 | `running-right` | 向右移动或被拖动 |
-| 2 | `running-left` | 向左移动或被拖动 |
-| 3 | `waving` | 打招呼 |
-| 4 | `jumping` | 轻微跳跃 |
-| 5 | `failed` | 失败、报错或不顺利 |
-| 6 | `waiting` | 等待用户输入 |
-| 7 | `running` | Codex 正在处理任务 |
-| 8 | `review` | 检查、审阅、提交前确认 |
-
-最终精灵图尺寸为 `1536 x 1872`，每格为 `192 x 208`。
-
-## 安装
-
-当前 Codex Desktop 版本通常读取 `avatars` 目录：
-
-```text
-%USERPROFILE%\.codex\avatars\nono\
-  avatar.json
-  spritesheet.webp
+```powershell
+.\standalone\bin\Release\net48\NoNo-Standalone.exe --self-test
+.\standalone\bin\Release\net48\NoNo-Standalone.exe --codex-computer-self-test
 ```
 
-旧版或兼容场景可能读取 `pets` 目录：
+语音协议自检：
 
-```text
-%USERPROFILE%\.codex\pets\nono\
-  pet.json
-  spritesheet.webp
+```powershell
+.\voice\.venv\Scripts\python.exe .\voice\voice_service.py --self-test
 ```
 
-清单文件示例：
+精灵图已经通过项目验证：
 
-```json
-{
-  "id": "nono",
-  "displayName": "诺诺",
-  "description": "A compact floating AI coding companion robot with a white rounded body, black glossy screen face, cyan glowing eyes, rabbit-ear energy antennae, small blue light wings, and calm protective coding-pet behavior.",
-  "spritesheetPath": "spritesheet.webp"
-}
-```
+- WebP 尺寸为 `1536 x 1872`
+- 单元格尺寸为 `192 x 208`
+- 未使用单元格保持透明
+- 九种动作均有对应帧和 GIF 预览
 
-复制完成后，重启 Codex Desktop，或在设置页刷新宠物/头像列表。
-
-## Windows / WSL 说明
-
-如果你在 Windows 上使用 Codex Desktop，并且 app-server 运行在 WSL 相关模式下，自定义宠物可能因为路径混用而无法被发现。典型情况是文件已经放进 `.codex/avatars` 或 `.codex/pets`，但设置页依旧不显示。
-
-本项目保留了补丁排查目录 `patch-inspect/`，用于处理这类 Windows/WSL 路径问题。不要直接修改 WindowsApps 里的原始 Codex 安装包；更稳妥的做法是复制出一个本地 patched Codex，再从 patched 快捷方式启动。
-
-## 文件结构
+## 项目结构
 
 ```text
 .
-+-- README.md
-+-- run-nono/
-|   +-- final/
-|   |   +-- spritesheet.webp
-|   |   +-- spritesheet.png
-|   |   +-- validation.json
-|   +-- qa/
-|       +-- action-gallery.html
-|       +-- contact-sheet.png
-|       +-- previews/
-|       |   +-- idle.gif
-|       |   +-- running-right.gif
-|       |   +-- running-left.gif
-|       |   +-- waving.gif
-|       |   +-- jumping.gif
-|       |   +-- failed.gif
-|       |   +-- waiting.gif
-|       |   +-- running.gif
-|       |   +-- review.gif
-+-- patch-inspect/
+├─ .github/              GitHub 安全策略
+├─ installer/            WiX 安装器项目和构建脚本
+├─ nono/                 Codex 自定义宠物发布资源
+├─ patch-inspect/        Windows/WSL 自定义宠物路径补丁参考
+├─ run-nono/             精灵图、动作帧、预览和验证结果
+├─ standalone/           Windows 桌宠和电脑助手源码
+├─ tools/                资源同步工具
+└─ voice/                本地语音服务和安装脚本
 ```
 
-## 验证
+`dist`、`release`、编译输出、语音模型、虚拟环境、缓存、日志和本机配置均由 `.gitignore` 排除。
 
-- 已生成最终 WebP 精灵图
-- 精灵图尺寸为 `1536 x 1872`
-- 使用 `192 x 208` 单元格布局
-- 未使用格子保持透明
-- 9 个动作状态均生成了 GIF 预览
+## Windows 与 WSL
 
----
+部分 Codex Desktop 版本在 Windows 与 WSL 混合路径环境下可能无法发现自定义宠物。遇到问题时：
 
-# NoNo
+1. 确认宠物文件位于当前 Codex 版本实际读取的 `avatars` 或 `pets` 目录。
+2. 重启 Codex Desktop，并刷新自定义宠物列表。
+3. 不要直接修改 WindowsApps 中的原始 Codex 安装目录。
+4. 如需排查路径兼容问题，参考 [`patch-inspect`](patch-inspect) 中的说明和脚本。
 
-NoNo is a custom animated pet for Codex Desktop: a compact floating AI coding companion with a rounded white body, glossy screen face, cyan eyes, rabbit-ear energy antennae, and a calm sci-fi assistant personality.
+## 隐私与安全
 
-It is designed as a lightweight desktop coding companion that reacts to Codex workflow states such as idle, running, waiting, review, and failure.
+- API 密钥不会写入仓库或普通偏好设置文件。
+- 本地保存的云端模型 API 密钥使用 Windows DPAPI `CurrentUser` 加密。
+- 麦克风音频默认不保存、不上传。
+- 审计日志不记录文件正文、剪贴板正文或凭据内容。
+- 原始参考素材、生成任务记录、本机路径和模型缓存不会上传到仓库。
 
-## Download
+发现安全问题时，请不要创建公开 Issue。请阅读[安全策略](https://github.com/lfeternity/nono/security/policy)，并使用 GitHub 私密漏洞报告。
 
-- [Latest release](https://github.com/lfeternity/nono/releases/latest)
-- [NoNo v1.0.2 Windows x64 installer](https://github.com/lfeternity/nono/releases/download/v1.0.2/NoNo-Desktop-Pet-1.0.2-x64.msi)
+## 参与项目
 
-## Preview
+普通缺陷和功能建议可以通过 [GitHub Issues](https://github.com/lfeternity/nono/issues) 提交。提交前请移除日志、截图和配置文件中的个人信息、API 密钥与本机路径。
 
-The generated pet atlas and QA previews are included under `run-nono/`.
+## 许可证
 
-- Contact sheet: `run-nono/qa/contact-sheet.png`
-- Action gallery: `run-nono/qa/action-gallery.html`
-- Final spritesheet: `run-nono/final/spritesheet.webp`
-
-Open `run-nono/qa/action-gallery.html` in a browser to preview all animations at once.
-
-## Codex Status Following
-
-`NoNo-Standalone.exe` can now inspect Codex activity and switch animations automatically. Use the pet's right-click `Codex Status` menu, or the panel `Settings` page, to toggle automatic following.
-
-- NoNo is single-instance per Windows desktop session. Launching copies from multiple installation directories keeps the first pet running and exits later copies immediately.
-- Status bridge files are checked first: `%APPDATA%\NoNoStandalone\codex-status.txt`, `%APPDATA%\NoNoStandalone\codex-status.json`, `%USERPROFILE%\.codex\codex-status.txt/json`, and the current directory's `.codex\status.txt/json`.
-- Supported status values are `idle`, `running`, `waiting`, `review`, and `failed`; JSON may use `state`, `status`, `phase`, `activity`, or `codexState`.
-- Without a status file, the standalone app uses conservative process inference: `codex-command-runner` maps to `running`, a foreground Codex window maps to `waiting`, and an open but inactive Codex app stays `idle`.
-- The right-click `Actions` menu and the panel pet-action buttons cover all 9 hatch-pet rows: `idle`, `running-right`, `running-left`, `waving`, `jumping`, `failed`, `waiting`, `running`, and `review`.
-
-## Cloud Desktop Agent
-
-The standalone pet can inspect and operate the full virtual desktop from the `Screen Assistant` context menu. It combines a desktop screenshot with a time-bounded Windows UI Automation tree, prefers short batches of stable semantic element actions, falls back to coordinates only when necessary, and re-observes after every state-changing action.
-
-- Primary model: `gemini-3.6-flash` through an OpenAI-compatible endpoint.
-- Optional fallback: `gpt-5.5`, started as a delayed hedge when the primary model is slow and preferred after repeated verification failures.
-- Emergency stop: `Ctrl+Alt+Escape`, the context-menu stop command, or the voice phrase “停下”.
-- Secrets: Windows DPAPI `CurrentUser`; API keys are never stored in the repository or the normal preferences file.
-- Safety: password fields are redacted, sensitive applications can be refused, and payment, credential, administrator, and security-setting actions are blocked locally.
-
-## Character
-
-NoNo is a small floating assistant robot built for a developer workflow:
-
-- white rounded capsule body
-- black glossy screen face
-- cyan glowing symbolic eyes
-- blue-and-white rabbit-ear energy antennae
-- small side light-wings
-- subtle futuristic body lines
-- soft, protective, slightly playful coding-pet behavior
-
-The design is original, while keeping the broad feeling of a friendly sci-fi helper pet.
-
-## Animation States
-
-The spritesheet follows the Codex pet atlas layout with 9 animation rows:
-
-| Row | State | Meaning |
-| --- | --- | --- |
-| 0 | `idle` | Calm floating default state |
-| 1 | `running-right` | Moving or being dragged to the right |
-| 2 | `running-left` | Moving or being dragged to the left |
-| 3 | `waving` | Friendly greeting |
-| 4 | `jumping` | Small happy jump |
-| 5 | `failed` | Failure or error feedback |
-| 6 | `waiting` | Waiting for user input |
-| 7 | `running` | Codex is working or thinking |
-| 8 | `review` | Reviewing, checking, or inspecting |
-
-The final atlas is `1536 x 1872`, using `192 x 208` cells.
-
-## Installation
-
-Copy the final pet files into your Codex custom pet/avatar directory.
-
-The standalone Windows MSI includes an installation-directory page. Keep the default per-user location or use Browse to choose another folder before installation.
-
-For current Codex Desktop builds that read custom avatars:
-
-```text
-%USERPROFILE%\.codex\avatars\nono\
-  avatar.json
-  spritesheet.webp
-```
-
-For older pet-based builds:
-
-```text
-%USERPROFILE%\.codex\pets\nono\
-  pet.json
-  spritesheet.webp
-```
-
-Example manifest:
-
-```json
-{
-  "id": "nono",
-  "displayName": "诺诺",
-  "description": "A compact floating AI coding companion robot with a white rounded body, black glossy screen face, cyan glowing eyes, rabbit-ear energy antennae, small blue light wings, and calm protective coding-pet behavior.",
-  "spritesheetPath": "spritesheet.webp"
-}
-```
-
-After copying the files, restart Codex Desktop or refresh the pet/avatar list in Settings.
-
-## WSL Note
-
-Some Codex Desktop builds on Windows with WSL app-server mode may not discover custom pets because the app constructs a mixed Windows/POSIX path.
-
-If the custom pet does not appear even though the files are in the correct directory, a local patched Codex copy may be required. This repository keeps the downloaded patch inspection files under `patch-inspect/`, but the original Codex installation should not be modified directly.
-
-## Repository Layout
-
-```text
-.
-+-- README.md
-+-- run-nono/
-|   +-- final/
-|   |   +-- spritesheet.webp
-|   |   +-- spritesheet.png
-|   |   +-- validation.json
-|   +-- qa/
-|       +-- action-gallery.html
-|       +-- contact-sheet.png
-|       +-- previews/
-|       |   +-- idle.gif
-|       |   +-- running-right.gif
-|       |   +-- running-left.gif
-|       |   +-- waving.gif
-|       |   +-- jumping.gif
-|       |   +-- failed.gif
-|       |   +-- waiting.gif
-|       |   +-- running.gif
-|       |   +-- review.gif
-+-- patch-inspect/
-```
-
-## Validation
-
-The generated atlas has been validated by the hatch-pet pipeline:
-
-- final WebP atlas exists
-- atlas size is `1536 x 1872`
-- frame cells follow the `192 x 208` layout
-- unused cells are transparent
-- preview GIFs are generated for all 9 rows
-
-## License
-
-Add your preferred license before publishing. If you do not have a specific requirement, MIT is a simple default for sharing the pet files and documentation.
+当前仓库尚未附带开源许可证。除非获得维护者明确授权，请不要默认拥有复制、修改或再分发本项目的权利。
