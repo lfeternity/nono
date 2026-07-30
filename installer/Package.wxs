@@ -1,0 +1,98 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package
+      Name="NoNo Desktop Pet"
+      Manufacturer="NoNo Project"
+      Version="$(var.ProductVersion)"
+      Language="2052"
+      ProductCode="{F42BAE46-0DF6-4570-A34A-DA3061589EB4}"
+      UpgradeCode="{8E65D65C-677E-454B-9F1E-73E9B935E982}"
+      Scope="perUser"
+      InstallerVersion="500"
+      Compressed="yes">
+    <SummaryInformation
+        Description="NoNo animated desktop companion"
+        Manufacturer="NoNo Project" />
+    <MajorUpgrade
+        DowngradeErrorMessage="已安装更新版本的 NoNo Desktop Pet。"
+        Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="NoNoIcon" SourceFile="$(var.SourceDir)\standalone\nono.ico" />
+    <Property Id="ARPPRODUCTICON" Value="NoNoIcon" />
+
+    <PropertyRef Id="WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED" />
+    <Launch Condition="Installed OR WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED"
+            Message="NoNo Desktop Pet 需要 .NET Framework 4.8 或更高版本。" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="InstallFolder" Name="NoNo">
+        <Directory Id="VoiceFolder" Name="voice" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuFolderNoNo" Name="NoNo" />
+    </StandardDirectory>
+    <SetProperty
+        Id="ARPINSTALLLOCATION"
+        Value="[InstallFolder]"
+        After="CostFinalize"
+        Sequence="both" />
+
+    <Component Id="MainApplication" Directory="InstallFolder" Guid="{1C454361-1A45-42A0-B6D1-56F6E62BA432}">
+      <File Id="NoNoExecutable" Source="$(var.AppDir)\NoNo-Standalone.exe">
+        <Shortcut
+            Id="StartMenuShortcut"
+            Directory="ProgramMenuFolderNoNo"
+            Name="NoNo Desktop Pet"
+            Description="启动诺诺桌面宠物"
+            WorkingDirectory="InstallFolder"
+            Icon="NoNoIcon" />
+        <Shortcut
+            Id="DesktopShortcut"
+            Directory="DesktopFolder"
+            Name="NoNo Desktop Pet"
+            Description="启动诺诺桌面宠物"
+            WorkingDirectory="InstallFolder"
+            Icon="NoNoIcon" />
+      </File>
+      <File Id="NoNoConfig" Source="$(var.AppDir)\NoNo-Standalone.exe.config" />
+      <File Id="NoNoReadme" Source="$(var.DistDir)\NoNo-Standalone-README.txt" />
+      <RemoveFolder Id="RemoveProgramMenuFolder" Directory="ProgramMenuFolderNoNo" On="uninstall" />
+      <RemoveFolder Id="RemoveInstallFolder" Directory="InstallFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="ApplicationFiles"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="VoiceRuntimeScripts" Directory="VoiceFolder" Guid="{919DFB9D-B1B9-46E5-AE99-10DFE3C81645}">
+      <File Id="VoiceService" Source="$(var.VoiceDir)\voice_service.py" />
+      <File Id="VoiceRequirements" Source="$(var.VoiceDir)\requirements.txt" />
+      <File Id="VoiceSetup" Source="$(var.VoiceDir)\setup.ps1" />
+      <File Id="VoiceDownloadOllama" Source="$(var.VoiceDir)\download_ollama.ps1" />
+      <File Id="VoiceDownloadSherpa" Source="$(var.VoiceDir)\download_sherpa.ps1" />
+      <File Id="VoiceDownloadTts" Source="$(var.VoiceDir)\download_tts.ps1" />
+      <File Id="VoiceReadme" Source="$(var.VoiceDir)\README.md" />
+      <RemoveFolder Id="RemoveVoiceFolder" Directory="VoiceFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="VoiceFiles"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Feature Id="MainFeature" Title="NoNo Desktop Pet" Level="1">
+      <ComponentRef Id="MainApplication" />
+      <ComponentRef Id="VoiceRuntimeScripts" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="InstallFolder" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.SourceDir)\installer\NOTICE.rtf" />
+  </Package>
+</Wix>

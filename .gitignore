@@ -1,0 +1,79 @@
+# Root documentation intentionally kept local.
+/CODEX_COMPUTER_CONTROL_PLAN.md
+/DESKTOP_AGENT_PLAN.md
+/PRODUCT.md
+/README.md
+/VOICE_ASSISTANT_PLAN.md
+/VOICE_SCREEN_ASSISTANT_PLAN.md
+
+# Local Codex/agent workspace configuration.
+/.agents/
+/.codex/
+
+# Secrets and machine-local configuration.
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# IDE and operating-system files.
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Build outputs and package intermediates.
+/dist/
+/release/
+**/bin/
+**/obj/
+packages/
+TestResults/
+coverage/
+
+# Python environments, caches, and generated files.
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# JavaScript dependencies and build output.
+node_modules/
+.next/
+
+# Runtime data, downloaded models, and logs.
+/voice/cache/
+/voice/models/
+/voice/ollama/
+*.log
+*.tmp
+*.temp
+
+# Image-generation job metadata and original reference material may be private.
+/run-nono/imagegen-jobs.json
+/run-nono/pet_request.json
+/run-nono/references/
+
+# Machine-specific generated reports can contain local usernames and paths.
+/run-nono/frames/frames-manifest.json
+/run-nono/qa/inspect-frames-current.json
+/run-nono/qa/inspect-frames.json
+/run-nono/qa/run-summary.json

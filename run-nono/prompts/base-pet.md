@@ -1,0 +1,7 @@
+Create one clean full-body reference sprite for Codex pet NoNo.
+
+Pet identity: Original soft futuristic Codex desktop pet named NoNo: small floating assistant robot, white rounded capsule body, black glossy screen face, two cyan symbolic eyes, blue-white rabbit-ear energy antennae, tiny side thrusters or light wings, subtle circuit lines, transparent energy core, affectionate protective calm coding companion. Avoid copying any franchise-specific details; keep it original, minimal, readable, and pet-safe..
+Style: Pet-safe sprite: compact full-body mascot, readable in a 192x208 cell, clear silhouette, simple face, stable palette/materials, and crisp edges for chroma-key extraction. Style `auto`: Infer the most appropriate pet-safe style from the user request and reference images, then keep that exact style consistent across every row. User style notes: Preserve the provided reference identity as a clean compact non-pixel sprite-like mascot with flat chroma background, no text, no scenery, no loose effects..
+
+
+Place a single centered pose on a perfectly flat pure magenta #FF00FF chroma-key background. Keep the full pet visible, compact, readable at 192x208, and easy to animate. Preserve approved reference identity cues. No scenery, text, borders, checkerboard transparency, shadows, glows, detached effects, or extra props. Keep #FF00FF and close colors out of the pet, props, highlights, and effects.

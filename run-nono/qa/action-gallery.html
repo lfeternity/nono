@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>诺诺动作展示</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      background: #0b1018;
+      color: #ecf6ff;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 8%, rgba(64, 202, 255, 0.16), transparent 34%),
+        linear-gradient(180deg, #0b1018 0%, #121924 100%);
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 20px 44px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin: 8px 0 0;
+      color: #9fb3c8;
+      font-size: 14px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button {
+      border: 1px solid rgba(132, 219, 255, 0.26);
+      border-radius: 8px;
+      background: rgba(17, 31, 44, 0.92);
+      color: #ecf6ff;
+      padding: 9px 13px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    button:hover {
+      background: rgba(30, 63, 86, 0.96);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+    }
+
+    .tile {
+      border: 1px solid rgba(132, 219, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(12, 21, 31, 0.82);
+      overflow: hidden;
+    }
+
+    .stage {
+      display: grid;
+      place-items: center;
+      min-height: 210px;
+      background:
+        linear-gradient(45deg, rgba(255,255,255,0.035) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,0.035) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.035) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.035) 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }
+
+    img {
+      width: 144px;
+      height: 156px;
+      object-fit: contain;
+      image-rendering: auto;
+    }
+
+    .caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid rgba(132, 219, 255, 0.12);
+    }
+
+    .name {
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .row {
+      color: #8fb3c7;
+      font-size: 12px;
+    }
+
+    .hero {
+      margin-top: 18px;
+      border: 1px solid rgba(132, 219, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(12, 21, 31, 0.72);
+      padding: 16px;
+    }
+
+    .hero img {
+      width: 100%;
+      height: auto;
+      max-height: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>诺诺动作展示</h1>
+        <p class="sub">9 个 Codex pet 状态动画，直接引用本地预览 GIF。</p>
+      </div>
+      <div class="controls">
+        <button type="button" id="reload">重新播放</button>
+        <button type="button" id="toggleSheet">显示总览图</button>
+      </div>
+    </header>
+
+    <section class="grid" aria-label="动作预览">
+      <article class="tile"><div class="stage"><img src="previews/idle.gif" alt="idle"></div><div class="caption"><span class="name">idle</span><span class="row">默认悬浮</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/running-right.gif" alt="running-right"></div><div class="caption"><span class="name">running-right</span><span class="row">向右移动</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/running-left.gif" alt="running-left"></div><div class="caption"><span class="name">running-left</span><span class="row">向左移动</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/waving.gif" alt="waving"></div><div class="caption"><span class="name">waving</span><span class="row">招手</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/jumping.gif" alt="jumping"></div><div class="caption"><span class="name">jumping</span><span class="row">跳跃</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/failed.gif" alt="failed"></div><div class="caption"><span class="name">failed</span><span class="row">失败</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/waiting.gif" alt="waiting"></div><div class="caption"><span class="name">waiting</span><span class="row">等待输入</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/running.gif" alt="running"></div><div class="caption"><span class="name">running</span><span class="row">处理中</span></div></article>
+      <article class="tile"><div class="stage"><img src="previews/review.gif" alt="review"></div><div class="caption"><span class="name">review</span><span class="row">检查</span></div></article>
+    </section>
+
+    <section class="hero" id="sheet" hidden>
+      <img src="contact-sheet.png" alt="NoNo contact sheet">
+    </section>
+  </main>
+
+  <script>
+    const reload = document.querySelector("#reload");
+    const toggleSheet = document.querySelector("#toggleSheet");
+    const sheet = document.querySelector("#sheet");
+
+    reload.addEventListener("click", () => {
+      for (const img of document.querySelectorAll(".stage img")) {
+        const src = img.getAttribute("src");
+        img.setAttribute("src", `${src.split("?")[0]}?t=${Date.now()}`);
+      }
+    });
+
+    toggleSheet.addEventListener("click", () => {
+      sheet.hidden = !sheet.hidden;
+      toggleSheet.textContent = sheet.hidden ? "显示总览图" : "隐藏总览图";
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+.venv/
+cache/
+models/
+ollama/
+__pycache__/
