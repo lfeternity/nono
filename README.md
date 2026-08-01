@@ -2,7 +2,7 @@
 
 > 一只会陪你写代码、跟随 Codex 工作状态的 Windows 桌面电子宠物。
 
-[下载最新版本](https://github.com/lfeternity/nono/releases/latest) · [查看 v1.0.2](https://github.com/lfeternity/nono/releases/tag/v1.0.2) · [安全策略](https://github.com/lfeternity/nono/security/policy)
+[下载最新版本](https://github.com/lfeternity/nono/releases/latest) · [查看 v1.0.4](https://github.com/lfeternity/nono/releases/tag/v1.0.4) · [安全策略](https://github.com/lfeternity/nono/security/policy)
 
 ![诺诺动作总览](run-nono/qa/contact-sheet.png)
 
@@ -37,9 +37,9 @@
 
 推荐普通用户直接安装最新的 MSI：
 
-- [NoNo v1.0.2 Windows x64 安装包](https://github.com/lfeternity/nono/releases/download/v1.0.2/NoNo-Desktop-Pet-1.0.2-x64.msi)
+- [NoNo v1.0.4 Windows x64 安装包](https://github.com/lfeternity/nono/releases/download/v1.0.4/NoNo-Desktop-Pet-1.0.4-x64.msi)
 - 文件大小：约 2.71 MB
-- SHA-256：`7646949FE48E71E29878EC718E3E001104C8F4374E9E930A14552FDA15D1B38B`
+- SHA-256：`3A8A64BE2D4C9E8487DBEA5D23C4B3EE059196C722B4869780444067D15C8834`
 
 安装要求：
 

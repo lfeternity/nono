@@ -638,6 +638,87 @@ namespace NoNoStandalone
         }
     }
 
+    internal sealed class PetMenuMouseMessageFilter : IMessageFilter
+    {
+        private const int WmRightButtonDown = 0x0204;
+        private const int WmRightButtonUp = 0x0205;
+        private const int WmRightButtonDoubleClick = 0x0206;
+        private const int WmMiddleButtonDown = 0x0207;
+        private const int WmMiddleButtonUp = 0x0208;
+        private const int WmMiddleButtonDoubleClick = 0x0209;
+        private const int WmXButtonDown = 0x020B;
+        private const int WmXButtonUp = 0x020C;
+        private const int WmXButtonDoubleClick = 0x020D;
+
+        public bool PreFilterMessage(ref Message message)
+        {
+            return IsBlockedMessage(message.Msg);
+        }
+
+        public static bool IsBlockedMessage(int messageId)
+        {
+            return messageId == WmRightButtonDown ||
+                messageId == WmRightButtonUp ||
+                messageId == WmRightButtonDoubleClick ||
+                messageId == WmMiddleButtonDown ||
+                messageId == WmMiddleButtonUp ||
+                messageId == WmMiddleButtonDoubleClick ||
+                messageId == WmXButtonDown ||
+                messageId == WmXButtonUp ||
+                messageId == WmXButtonDoubleClick;
+        }
+    }
+
+    internal sealed class PetContextMenuStrip : ContextMenuStrip
+    {
+        private readonly PetMenuMouseMessageFilter mouseMessageFilter = new PetMenuMouseMessageFilter();
+        private bool mouseMessageFilterInstalled;
+
+        protected override void OnOpened(EventArgs e)
+        {
+            InstallMouseMessageFilter();
+            base.OnOpened(e);
+        }
+
+        protected override void OnClosed(ToolStripDropDownClosedEventArgs e)
+        {
+            RemoveMouseMessageFilter();
+            base.OnClosed(e);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                RemoveMouseMessageFilter();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private void InstallMouseMessageFilter()
+        {
+            if (mouseMessageFilterInstalled)
+            {
+                return;
+            }
+
+            Application.AddMessageFilter(mouseMessageFilter);
+            mouseMessageFilterInstalled = true;
+        }
+
+        private void RemoveMouseMessageFilter()
+        {
+            if (!mouseMessageFilterInstalled)
+            {
+                return;
+            }
+
+            Application.RemoveMessageFilter(mouseMessageFilter);
+            mouseMessageFilterInstalled = false;
+        }
+    }
+
     internal sealed class LayeredFrame : IDisposable
     {
         public readonly IntPtr BitmapHandle;
@@ -952,7 +1033,7 @@ namespace NoNoStandalone
 
         private ContextMenuStrip BuildMenu()
         {
-            ContextMenuStrip context = new ContextMenuStrip();
+            ContextMenuStrip context = new PetContextMenuStrip();
             ConfigurePetMenu(context);
             context.Opening += delegate
             {
@@ -1126,7 +1207,7 @@ namespace NoNoStandalone
 
         private ContextMenuStrip BuildTrayMenu()
         {
-            ContextMenuStrip context = new ContextMenuStrip();
+            ContextMenuStrip context = new PetContextMenuStrip();
             ConfigurePetMenu(context);
             context.Opening += delegate { UpdateSystemMenuChecks(); };
 
@@ -11215,6 +11296,23 @@ $result.Text";
                 if (!VoiceCommandRouter.RunSelfTest())
                 {
                     return 6;
+                }
+
+                if (!PetMenuMouseMessageFilter.IsBlockedMessage(0x0204) ||
+                    !PetMenuMouseMessageFilter.IsBlockedMessage(0x0205) ||
+                    !PetMenuMouseMessageFilter.IsBlockedMessage(0x0207) ||
+                    PetMenuMouseMessageFilter.IsBlockedMessage(0x0201) ||
+                    PetMenuMouseMessageFilter.IsBlockedMessage(0x0202))
+                {
+                    return 7;
+                }
+
+                using (PetForm form = new PetForm())
+                {
+                    if (form.IsDisposed)
+                    {
+                        return 8;
+                    }
                 }
 
                 return 0;

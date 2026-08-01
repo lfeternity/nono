@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$Version = "1.0.2"
+$Version = "1.0.4"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $standaloneProject = Join-Path $projectRoot "standalone\NoNoStandalone.csproj"
@@ -10,6 +10,12 @@ $installerProject = Join-Path $PSScriptRoot "NoNoInstaller.wixproj"
 dotnet build $standaloneProject -c Release
 if ($LASTEXITCODE -ne 0) {
     throw "NoNo application build failed."
+}
+
+$standaloneExecutable = Join-Path $projectRoot "standalone\bin\Release\net48\NoNo-Standalone.exe"
+$selfTest = Start-Process -FilePath $standaloneExecutable -ArgumentList "--self-test" -WindowStyle Hidden -Wait -PassThru
+if ($selfTest.ExitCode -ne 0) {
+    throw "NoNo application self-test failed with exit code $($selfTest.ExitCode)."
 }
 
 # Package.wxs lists every payload file explicitly. Debug symbols, local models,

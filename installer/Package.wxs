@@ -5,7 +5,7 @@
       Manufacturer="NoNo Project"
       Version="$(var.ProductVersion)"
       Language="2052"
-      ProductCode="{F42BAE46-0DF6-4570-A34A-DA3061589EB4}"
+      ProductCode="{F605E139-F22A-4F75-82FA-53F0BBCAD8A4}"
       UpgradeCode="{8E65D65C-677E-454B-9F1E-73E9B935E982}"
       Scope="perUser"
       InstallerVersion="500"
