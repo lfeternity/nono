@@ -6,14 +6,17 @@
     <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0</ProductVersion>
     <OutputName>NoNo-Desktop-Pet-$(ProductVersion)-x64</OutputName>
     <OutputPath>..\release\</OutputPath>
+    <AppDir Condition="'$(AppDir)' == ''">$(MSBuildProjectDirectory)\..\standalone\bin\Release\net48</AppDir>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
-    <DefineConstants>ProductVersion=$(ProductVersion);AppDir=$(MSBuildProjectDirectory)\..\standalone\bin\Release\net48;DistDir=$(MSBuildProjectDirectory)\..\dist;VoiceDir=$(MSBuildProjectDirectory)\..\voice;SourceDir=$(MSBuildProjectDirectory)\..</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>ProductVersion=$(ProductVersion);AppDir=$(AppDir);DistDir=$(MSBuildProjectDirectory)\..\dist;VoiceDir=$(MSBuildProjectDirectory)\..\voice;SourceDir=$(MSBuildProjectDirectory)\..</DefineConstants>
     <Cultures>zh-CN</Cultures>
     <!-- ICE91 is expected: this package is intentionally per-user only. -->
     <SuppressIces>ICE91</SuppressIces>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Package.wxs" />
     <PackageReference Include="WixToolset.Netfx.wixext" Version="4.0.6" />
     <PackageReference Include="WixToolset.UI.wixext" Version="4.0.6" />
   </ItemGroup>

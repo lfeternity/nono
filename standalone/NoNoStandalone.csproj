@@ -21,6 +21,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="NoNoStandalone.cs" />
+    <Compile Include="ClipboardOcr.cs" Condition="Exists('ClipboardOcr.cs')" />
     <Compile Include="VoiceAssistant.cs" Condition="Exists('VoiceAssistant.cs')" />
     <Compile Include="VoiceCommandRouter.cs" Condition="Exists('VoiceCommandRouter.cs')" />
     <Compile Include="DesktopAgent.cs" Condition="Exists('DesktopAgent.cs')" />
@@ -31,6 +32,8 @@
     <Compile Include="CodexComputerTools.cs" Condition="Exists('CodexComputerTools.cs')" />
     <Compile Include="ExtendedComputerControl.cs" Condition="Exists('ExtendedComputerControl.cs')" />
     <Compile Include="CodexComputerBridge.cs" Condition="Exists('CodexComputerBridge.cs')" />
+    <Compile Include="ScreenTranslation.cs" Condition="Exists('ScreenTranslation.cs')" />
+    <Compile Include="ScreenTranslationForms.cs" Condition="Exists('ScreenTranslationForms.cs')" />
     <Content Include="app.manifest" />
     <Content Include="nono.ico" />
     <EmbeddedResource Include="..\run-nono\final\spritesheet.png" LogicalName="spritesheet.png" />
@@ -50,5 +53,32 @@
     <Reference Include="UIAutomationTypes" />
     <Reference Include="WindowsBase" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.11.0.20250507" />
+    <PackageReference Include="Sdcb.PaddleInference.runtime.win64.mkl" Version="3.3.1.70" />
+    <PackageReference Include="Sdcb.PaddleOCR.Models.Local" Version="3.3.1" />
+    <Content Include="..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ocr-models\**\*.*" Exclude="ocr-models\**\*.tar" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- PaddleSharp loads its net48 native payload from dll\x64. The SDK also
+       copies those files to the output root, where they are redundant. -->
+  <Target Name="RemoveDuplicateNativeRuntimeCopies" AfterTargets="Build;Publish">
+    <ItemGroup>
+      <DuplicatePaddleNative Include="$(OutDir)common.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)onnxruntime.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)onnxruntime_providers_shared.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)libiomp5md.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)mkldnn.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)mklml.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)OpenCvSharpExtern.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)opencv_videoio_ffmpeg4110_64.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)paddle_inference_c.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)paddle2onnx.dll" />
+      <DuplicatePaddleNative Include="$(OutDir)phi.dll" />
+      <UnusedScreenTranslationNative Include="$(OutDir)dll\x64\opencv_videoio_ffmpeg4110_64.dll" />
+    </ItemGroup>
+    <Delete Files="@(DuplicatePaddleNative)" />
+    <Delete Files="@(UnusedScreenTranslationNative)" />
+    <RemoveDir Directories="$(OutDir)dll\x86" Condition="Exists('$(OutDir)dll\x86')" />
+  </Target>
 </Project>

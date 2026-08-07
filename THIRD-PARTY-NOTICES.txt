@@ -1,0 +1,43 @@
+NoNo Desktop Pet - Third-Party Notices
+======================================
+
+The screen-region translation and clipboard OCR features include or use the following
+third-party software and model data. Copyright remains with the respective
+authors. The listed licenses permit local and commercial use subject to their
+terms.
+
+PaddleOCR, Paddle Inference, PaddleSharp, and PP-OCRv5 model data
+License: Apache License 2.0
+Sources: https://github.com/PaddlePaddle/PaddleOCR
+         https://github.com/PaddlePaddle/Paddle
+         https://github.com/sdcb/PaddleSharp
+
+OpenCV and OpenCvSharp
+License: Apache License 2.0
+Sources: https://github.com/opencv/opencv
+         https://github.com/shimat/opencvsharp
+
+ONNX Runtime
+License: MIT License
+Source: https://github.com/microsoft/onnxruntime
+
+oneDNN and the Intel MKL/OpenMP runtime distributed with Paddle Inference
+License: Apache License 2.0
+Sources: https://github.com/uxlfoundation/oneDNN
+         https://github.com/sdcb/PaddleSharp
+
+YamlDotNet
+License: MIT License
+Source: https://github.com/aaubry/YamlDotNet
+
+Microsoft System.Memory, System.Buffers, System.Numerics.Vectors, and
+System.Runtime.CompilerServices.Unsafe
+License: MIT License
+Source: https://github.com/dotnet/runtime
+
+Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
+MIT License: https://opensource.org/license/mit
+
+No screenshot image is sent to a translation provider by this feature. Only
+OCR text that passes the local sensitive-text filters is submitted to the
+OpenAI-compatible endpoint configured by the user.

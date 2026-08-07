@@ -25,6 +25,7 @@ namespace NoNoStandalone
         [STAThread]
         private static int Main(string[] args)
         {
+            InstallExceptionHandlers();
             if (HasFlag(args, "--self-test"))
             {
                 return SelfTest.Run();
@@ -49,6 +50,53 @@ namespace NoNoStandalone
                     {
                     }
                     return 8;
+                }
+            }
+
+            if (HasFlag(args, "--screen-translation-self-test"))
+            {
+                try
+                {
+                    ScreenTranslationSelfTestResult result = ScreenTranslationSelfTest.RunDeepAsync().GetAwaiter().GetResult();
+                    File.WriteAllText(
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "NoNo-ScreenTranslation.selftest.log"),
+                        result.Report,
+                        new UTF8Encoding(false));
+                    return result.Success ? 0 : 9;
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        File.WriteAllText(
+                            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "NoNo-ScreenTranslation.selftest.log"),
+                            ex.ToString(),
+                            new UTF8Encoding(false));
+                    }
+                    catch
+                    {
+                    }
+                    return 10;
+                }
+            }
+
+            if (HasFlag(args, "--clipboard-ocr-self-test"))
+            {
+                string reportPath = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "NoNo-ClipboardOcr.selftest.log");
+                try
+                {
+                    return ClipboardOcrSelfTest.Run(reportPath);
+                }
+                catch (Exception ex)
+                {
+                    File.WriteAllText(reportPath, ex.ToString(), new UTF8Encoding(false));
+                    return 12;
+                }
+                finally
+                {
+                    ClipboardImageOcrService.Dispose();
                 }
             }
 
@@ -86,6 +134,44 @@ namespace NoNoStandalone
             }
 
             return false;
+        }
+
+        private static void InstallExceptionHandlers()
+        {
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += delegate(object sender, System.Threading.ThreadExceptionEventArgs e)
+            {
+                WriteUnhandledException("UI thread", e.Exception);
+            };
+            AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e)
+            {
+                WriteUnhandledException("AppDomain", e.ExceptionObject as Exception);
+            };
+            TaskScheduler.UnobservedTaskException += delegate(object sender, UnobservedTaskExceptionEventArgs e)
+            {
+                WriteUnhandledException("Task", e.Exception);
+                e.SetObserved();
+            };
+        }
+
+        private static void WriteUnhandledException(string source, Exception exception)
+        {
+            try
+            {
+                string path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "NoNoStandalone",
+                    "crash.log");
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.AppendAllText(
+                    path,
+                    DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture) + " [" + source + "]\r\n" +
+                    (exception == null ? "<unknown exception>" : exception.ToString()) + "\r\n\r\n",
+                    new UTF8Encoding(false));
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -779,9 +865,11 @@ namespace NoNoStandalone
         private ToolStripMenuItem desktopAgentOperateMenuItem;
         private ToolStripMenuItem desktopAgentStopMenuItem;
         private ToolStripMenuItem desktopAgentStateMenuItem;
+        private ToolStripMenuItem screenTranslationMenuItem;
         private ToolStripMenuItem emptyRecycleBinMenuItem;
         private readonly VoiceAssistantController voiceAssistant;
         private readonly DesktopAgentCoordinator desktopAgent;
+        private readonly ScreenTranslationCoordinator screenTranslation;
         private LocalSpeechPlayer voiceSpeechPlayer;
         private readonly VoiceCaptionForm voiceCaption;
         private static readonly int[] JumpFrameTopOffsets = new int[] { 17, 7, 0, 9, 18 };
@@ -811,6 +899,7 @@ namespace NoNoStandalone
         private Task emptyRecycleBinTask;
         private int codexPollInProgress;
         private bool pendingForcedCodexPoll;
+        private bool clipboardListenerRegistered;
 
         public PetForm()
         {
@@ -823,6 +912,10 @@ namespace NoNoStandalone
             scale = PetScaleSettingsStore.Load();
             petAppearance = PetAppearanceStore.Load();
             followCodexStatus = CodexMonitorSettingsStore.LoadEnabled();
+            screenTranslation = new ScreenTranslationCoordinator(
+                this,
+                delegate(string animation, bool once) { Play(animation, once); });
+            screenTranslation.StateChanged += OnScreenTranslationStateChanged;
 
             Text = "诺诺";
             FormBorderStyle = FormBorderStyle.None;
@@ -895,6 +988,10 @@ namespace NoNoStandalone
                 timer.Start();
                 clipboardMonitorTimer.Start();
                 voiceAssistant.StartIfEnabled();
+                System.Threading.Tasks.Task warmup = screenTranslation.WarmUpAsync();
+                warmup.ContinueWith(
+                    delegate(System.Threading.Tasks.Task completed) { GC.KeepAlive(completed.Exception); },
+                    System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
             };
         }
 
@@ -936,6 +1033,14 @@ namespace NoNoStandalone
                     desktopAgent.EventReceived -= OnDesktopAgentEvent;
                     desktopAgent.Dispose();
                 }
+
+                if (screenTranslation != null)
+                {
+                    screenTranslation.StateChanged -= OnScreenTranslationStateChanged;
+                    screenTranslation.Dispose();
+                }
+
+                ClipboardImageOcrService.Dispose();
 
                 if (voiceSpeechPlayer != null)
                 {
@@ -993,6 +1098,12 @@ namespace NoNoStandalone
                 return;
             }
 
+            if (m.Msg == NativeMethods.WM_CLIPBOARDUPDATE)
+            {
+                CaptureClipboardInBackground();
+                return;
+            }
+
             if (mousePassthrough && m.Msg == NativeMethods.WM_NCHITTEST)
             {
                 m.Result = NativeMethods.IsRightButtonDown()
@@ -1008,10 +1119,17 @@ namespace NoNoStandalone
         {
             base.OnHandleCreated(e);
             RegisterConfiguredHotkeys();
+            clipboardListenerRegistered = NativeMethods.RegisterClipboardListener(Handle);
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
+            if (clipboardListenerRegistered)
+            {
+                NativeMethods.UnregisterClipboardListener(Handle);
+                clipboardListenerRegistered = false;
+            }
+
             GlobalHotkeyManager.UnregisterAll(Handle);
             base.OnHandleDestroyed(e);
         }
@@ -1039,6 +1157,7 @@ namespace NoNoStandalone
             {
                 UpdateSystemMenuChecks();
                 UpdateDesktopAgentMenuChecks();
+                UpdateScreenTranslationMenuChecks();
             };
             ToolStripMenuItem panel = StyledMenuItem("面板");
             panel.Font = new Font(context.Font, FontStyle.Bold);
@@ -1051,6 +1170,10 @@ namespace NoNoStandalone
             ToolStripMenuItem weather = StyledMenuItem("查看天气");
             weather.Click += delegate { ShowWeather(); };
             context.Items.Add(weather);
+
+            screenTranslationMenuItem = StyledMenuItem("翻译框选区域");
+            screenTranslationMenuItem.Click += async delegate { await ToggleScreenTranslationAsync(); };
+            context.Items.Add(screenTranslationMenuItem);
 
             ToolStripMenuItem showDesktop = StyledMenuItem("回桌面");
             showDesktop.Click += delegate { ShowDesktop(); };
@@ -1262,7 +1385,8 @@ namespace NoNoStandalone
                     delegate { return followCodexStatus; },
                     delegate(bool enabled) { SetCodexFollow(enabled, true); },
                     delegate { return petAppearance; },
-                    delegate(string appearanceId) { SetPetAppearance(PetAppearanceStore.Find(appearanceId), true); });
+                    delegate(string appearanceId) { SetPetAppearance(PetAppearanceStore.Find(appearanceId), true); },
+                    delegate(IWin32Window owner) { OpenScreenTranslationSettings(owner); });
                 panelForm.FormClosed += delegate { panelForm = null; };
             }
 
@@ -1331,6 +1455,24 @@ namespace NoNoStandalone
             {
                 ShowDesktop();
             }
+            else if (String.Equals(action, "screen-translation", StringComparison.OrdinalIgnoreCase))
+            {
+                ObserveHotkeyTask(ToggleScreenTranslationAsync(), "翻译框选区域");
+            }
+            else if (String.Equals(action, "toggle-desktop-icons", StringComparison.OrdinalIgnoreCase))
+            {
+                ToggleDesktopIcons(desktopIconsMenuItem, EventArgs.Empty);
+                UpdateSystemMenuChecks();
+            }
+            else if (String.Equals(action, "toggle-taskbar", StringComparison.OrdinalIgnoreCase))
+            {
+                ToggleTaskbar(taskbarMenuItem, EventArgs.Empty);
+                UpdateSystemMenuChecks();
+            }
+            else if (String.Equals(action, "empty-recycle-bin", StringComparison.OrdinalIgnoreCase))
+            {
+                ObserveHotkeyTask(EmptyRecycleBinAsync(), "清空回收站");
+            }
             else if (String.Equals(action, "toggle-passthrough", StringComparison.OrdinalIgnoreCase))
             {
                 mousePassthrough = !mousePassthrough;
@@ -1363,6 +1505,26 @@ namespace NoNoStandalone
                     desktopAgent.Stop();
                 }
             }
+        }
+
+        private static void ObserveHotkeyTask(Task task, string action)
+        {
+            if (task == null)
+            {
+                return;
+            }
+
+            task.ContinueWith(
+                delegate(Task completed)
+                {
+                    if (completed.IsFaulted && completed.Exception != null)
+                    {
+                        ProgramLog.Write("快捷键: " + action, completed.Exception);
+                    }
+                },
+                System.Threading.CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
         }
 
         private void ShowQuickLauncher()
@@ -1623,6 +1785,80 @@ namespace NoNoStandalone
                 desktopAgent.ApplySettings(updated, updatedSecrets);
                 RestartVoiceForAgentRouting();
                 UpdateDesktopAgentMenuChecks();
+            }
+        }
+
+        private async System.Threading.Tasks.Task ToggleScreenTranslationAsync()
+        {
+            if (screenTranslation == null)
+            {
+                return;
+            }
+
+            if (screenTranslation.IsBusy || screenTranslation.HasOverlay)
+            {
+                screenTranslation.Stop();
+            }
+            else
+            {
+                await screenTranslation.BeginAsync();
+            }
+            UpdateScreenTranslationMenuChecks();
+        }
+
+        private void OpenScreenTranslationSettings(IWin32Window dialogOwner)
+        {
+            try
+            {
+                if (screenTranslation == null)
+                {
+                    return;
+                }
+
+                if (screenTranslation.IsBusy)
+                {
+                    MessageBox.Show(
+                        dialogOwner ?? this,
+                        "区域翻译正在运行，请先完成或停止当前翻译。",
+                        "区域翻译设置",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                screenTranslation.EditSettings(dialogOwner ?? this);
+            }
+            catch (Exception ex)
+            {
+                ProgramLog.Write("Screen translation panel settings", ex);
+            }
+            finally
+            {
+                UpdateScreenTranslationMenuChecks();
+            }
+        }
+
+        private void OnScreenTranslationStateChanged(object sender, EventArgs e)
+        {
+            UpdateScreenTranslationMenuChecks();
+        }
+
+        private void UpdateScreenTranslationMenuChecks()
+        {
+            if (screenTranslationMenuItem != null)
+            {
+                if (screenTranslation != null && screenTranslation.IsBusy)
+                {
+                    screenTranslationMenuItem.Text = "停止区域翻译";
+                }
+                else if (screenTranslation != null && screenTranslation.HasOverlay)
+                {
+                    screenTranslationMenuItem.Text = "关闭区域翻译";
+                }
+                else
+                {
+                    screenTranslationMenuItem.Text = "翻译框选区域";
+                }
             }
         }
 
@@ -2831,6 +3067,7 @@ namespace NoNoStandalone
         private readonly Action<bool> codexFollowSetter;
         private readonly Func<PetAppearance> petAppearanceGetter;
         private readonly Action<string> petAppearanceSetter;
+        private readonly Action<IWin32Window> screenTranslationSettingsAction;
         private PanelTheme currentTheme;
         private Panel navPanel;
         private Label brandLabel;
@@ -2857,6 +3094,7 @@ namespace NoNoStandalone
         private Button copyClipboardButton;
         private Button saveClipboardImageButton;
         private Button copyOcrButton;
+        private Button reRecognizeOcrButton;
         private ClipboardHistoryItem selectedClipboardItem;
         private TreeView notesTree;
         private TextBox noteContentBox;
@@ -2865,21 +3103,21 @@ namespace NoNoStandalone
         private readonly Icon windowIcon;
 
         public FunctionalNoNoPanelForm()
-            : this(null, null, null, null, null, null)
+            : this(null, null, null, null, null, null, null)
         {
         }
 
         public FunctionalNoNoPanelForm(Action<string, bool> petAction)
-            : this(petAction, null, null, null, null, null)
+            : this(petAction, null, null, null, null, null, null)
         {
         }
 
         public FunctionalNoNoPanelForm(Action<string, bool> petAction, Func<CodexActivitySnapshot> codexStatusProvider, Func<bool> codexFollowGetter, Action<bool> codexFollowSetter)
-            : this(petAction, codexStatusProvider, codexFollowGetter, codexFollowSetter, null, null)
+            : this(petAction, codexStatusProvider, codexFollowGetter, codexFollowSetter, null, null, null)
         {
         }
 
-        public FunctionalNoNoPanelForm(Action<string, bool> petAction, Func<CodexActivitySnapshot> codexStatusProvider, Func<bool> codexFollowGetter, Action<bool> codexFollowSetter, Func<PetAppearance> petAppearanceGetter, Action<string> petAppearanceSetter)
+        public FunctionalNoNoPanelForm(Action<string, bool> petAction, Func<CodexActivitySnapshot> codexStatusProvider, Func<bool> codexFollowGetter, Action<bool> codexFollowSetter, Func<PetAppearance> petAppearanceGetter, Action<string> petAppearanceSetter, Action<IWin32Window> screenTranslationSettingsAction)
         {
             this.petAction = petAction;
             this.codexStatusProvider = codexStatusProvider;
@@ -2887,6 +3125,7 @@ namespace NoNoStandalone
             this.codexFollowSetter = codexFollowSetter;
             this.petAppearanceGetter = petAppearanceGetter;
             this.petAppearanceSetter = petAppearanceSetter;
+            this.screenTranslationSettingsAction = screenTranslationSettingsAction;
             features = new List<PanelFeature>();
             navButtons = new List<Button>();
             ClipboardSessionHistory.EnsureLoaded();
@@ -3797,6 +4036,10 @@ namespace NoNoStandalone
                 }
             };
             imageActions.Controls.Add(copyOcrButton);
+
+            reRecognizeOcrButton = CreateActionButton("重新识别");
+            reRecognizeOcrButton.Click += async delegate { await ReRecognizeSelectedClipboardImageAsync(); };
+            imageActions.Controls.Add(reRecognizeOcrButton);
             detail.Controls.Add(imageActions, 0, 6);
 
             clipboardOcrBox = new TextBox();
@@ -3836,6 +4079,7 @@ namespace NoNoStandalone
 
             List<ClipboardHistoryItem> textItems = ClipboardSessionHistory.GetTextItems();
             List<ClipboardHistoryItem> imageItems = ClipboardSessionHistory.GetImageItems();
+            string selectedSignature = selectedClipboardItem == null ? null : selectedClipboardItem.Signature;
 
             textClipboardList.BeginUpdate();
             textClipboardList.Items.Clear();
@@ -3857,9 +4101,14 @@ namespace NoNoStandalone
                 ClipboardHistoryItem entry = imageItems[i];
                 ListViewItem item = new ListViewItem(entry.CreatedAt.ToString("MM-dd HH:mm:ss", CultureInfo.CurrentCulture));
                 item.SubItems.Add(FormatBytes(entry.Length));
-                item.SubItems.Add(Preview(entry.OcrText));
+                item.SubItems.Add(Preview(ClipboardOcrPreview(entry)));
                 item.Tag = entry;
                 imageClipboardList.Items.Add(item);
+                if (!String.IsNullOrEmpty(selectedSignature) &&
+                    String.Equals(entry.Signature, selectedSignature, StringComparison.Ordinal))
+                {
+                    item.Selected = true;
+                }
             }
             imageClipboardList.EndUpdate();
         }
@@ -3878,11 +4127,12 @@ namespace NoNoStandalone
             clipboardTimeLabel.Text = "时间: " + selectedClipboardItem.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture);
             clipboardContentBox.Text = selectedClipboardItem.Kind == "文本" ? selectedClipboardItem.Text : "图片内容可通过“复制内容”复制回剪贴板。";
             clipboardPictureBox.Image = selectedClipboardItem.Image;
-            clipboardOcrBox.Text = selectedClipboardItem.Kind == "图片" ? selectedClipboardItem.OcrText : "";
+            clipboardOcrBox.Text = selectedClipboardItem.Kind == "图片" ? ClipboardOcrDisplay(selectedClipboardItem) : "";
             bool hasImage = selectedClipboardItem.Kind == "图片" && selectedClipboardItem.Image != null;
             clipboardPictureBox.Cursor = hasImage ? Cursors.Hand : Cursors.Default;
             saveClipboardImageButton.Enabled = hasImage;
             copyOcrButton.Enabled = hasImage && !String.IsNullOrEmpty(selectedClipboardItem.OcrText);
+            reRecognizeOcrButton.Enabled = hasImage;
         }
 
         private void ClearClipboardDetail()
@@ -3897,6 +4147,74 @@ namespace NoNoStandalone
             clipboardOcrBox.Text = "";
             saveClipboardImageButton.Enabled = false;
             copyOcrButton.Enabled = false;
+            reRecognizeOcrButton.Enabled = false;
+        }
+
+        private async Task ReRecognizeSelectedClipboardImageAsync()
+        {
+            ClipboardHistoryItem item = selectedClipboardItem;
+            if (item == null || item.Kind != "图片" || item.Image == null)
+            {
+                return;
+            }
+
+            reRecognizeOcrButton.Enabled = false;
+            copyOcrButton.Enabled = false;
+            clipboardOcrBox.Text = "正在使用 PP-OCRv5 Server 重新识别...";
+            try
+            {
+                bool updated = await ClipboardSessionHistory.ReRecognizeAsync(item);
+                if (!updated)
+                {
+                    clipboardOcrBox.Text = "图片已经不在当前剪贴板历史中。";
+                    return;
+                }
+                if (ReferenceEquals(selectedClipboardItem, item))
+                {
+                    clipboardOcrBox.Text = ClipboardOcrDisplay(item);
+                    copyOcrButton.Enabled = !String.IsNullOrEmpty(item.OcrText);
+                }
+            }
+            catch (Exception ex)
+            {
+                ProgramLog.Write("Re-recognize clipboard image", ex);
+                clipboardOcrBox.Text = "重新识别失败: " + ex.Message;
+            }
+            finally
+            {
+                if (!IsDisposed && ReferenceEquals(selectedClipboardItem, item))
+                {
+                    reRecognizeOcrButton.Enabled = true;
+                }
+            }
+        }
+
+        private static string ClipboardOcrPreview(ClipboardHistoryItem item)
+        {
+            if (item == null)
+            {
+                return "";
+            }
+            if (!String.IsNullOrWhiteSpace(item.OcrText))
+            {
+                return item.OcrText;
+            }
+            return String.IsNullOrWhiteSpace(item.OcrError) ? "未识别到文字" : "识别失败";
+        }
+
+        private static string ClipboardOcrDisplay(ClipboardHistoryItem item)
+        {
+            if (item == null)
+            {
+                return "";
+            }
+            if (!String.IsNullOrWhiteSpace(item.OcrText))
+            {
+                return item.OcrText;
+            }
+            return String.IsNullOrWhiteSpace(item.OcrError)
+                ? "未识别到文字。"
+                : "识别失败: " + item.OcrError;
         }
 
         private void ShowClipboardImagePreview()
@@ -4494,13 +4812,13 @@ namespace NoNoStandalone
 
         private void BuildSettingsView()
         {
-            Panel body = BeginPage("设置", "控制快捷键设置。保存后会立即重新注册可用的全局快捷键。");
+            Panel body = BeginPage("设置", "管理常用行为、区域翻译与全局快捷键。");
             body.AutoScroll = true;
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Top;
             layout.AutoSize = true;
             layout.ColumnCount = 1;
-            layout.RowCount = 6;
+            layout.RowCount = 7;
             body.Controls.Add(layout);
 
             CheckBox startupCheck = new CheckBox();
@@ -4589,12 +4907,48 @@ namespace NoNoStandalone
             codexLayout.SetColumnSpan(codexStateLabel, 3);
             RefreshCodexStatusLine();
 
+            GroupBox screenTranslationGroup = new GroupBox();
+            screenTranslationGroup.Text = "区域翻译";
+            screenTranslationGroup.Width = 760;
+            screenTranslationGroup.Height = 84;
+            screenTranslationGroup.Margin = new Padding(0, 0, 0, 12);
+            layout.Controls.Add(screenTranslationGroup, 0, 3);
+
+            TableLayoutPanel screenTranslationLayout = new TableLayoutPanel();
+            screenTranslationLayout.Dock = DockStyle.Fill;
+            screenTranslationLayout.Padding = new Padding(12);
+            screenTranslationLayout.ColumnCount = 2;
+            screenTranslationLayout.RowCount = 1;
+            screenTranslationLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            screenTranslationLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 132F));
+            screenTranslationGroup.Controls.Add(screenTranslationLayout);
+
+            Label screenTranslationSummary = CreateMutedLabel("目标语言、翻译服务与文字识别");
+            screenTranslationSummary.AutoSize = false;
+            screenTranslationSummary.Dock = DockStyle.Fill;
+            screenTranslationLayout.Controls.Add(screenTranslationSummary, 0, 0);
+
+            Button screenTranslationSettingsButton = CreateActionButton("打开翻译设置");
+            screenTranslationSettingsButton.AutoSize = false;
+            screenTranslationSettingsButton.Size = new Size(116, 30);
+            screenTranslationSettingsButton.Anchor = AnchorStyles.Right;
+            screenTranslationSettingsButton.Margin = new Padding(8, 0, 0, 0);
+            screenTranslationSettingsButton.Enabled = screenTranslationSettingsAction != null;
+            screenTranslationSettingsButton.Click += delegate
+            {
+                if (screenTranslationSettingsAction != null)
+                {
+                    screenTranslationSettingsAction(this);
+                }
+            };
+            screenTranslationLayout.Controls.Add(screenTranslationSettingsButton, 1, 0);
+
             GroupBox notesGroup = new GroupBox();
             notesGroup.Text = "便签";
             notesGroup.Width = 760;
             notesGroup.Height = 104;
             notesGroup.Margin = new Padding(0, 0, 0, 12);
-            layout.Controls.Add(notesGroup, 0, 3);
+            layout.Controls.Add(notesGroup, 0, 4);
 
             TableLayoutPanel notesLayout = new TableLayoutPanel();
             notesLayout.Dock = DockStyle.Fill;
@@ -4671,9 +5025,10 @@ namespace NoNoStandalone
             hotkeyGroup.Text = "快捷键";
             hotkeyGroup.Width = 760;
             hotkeyGroup.Height = 330;
-            layout.Controls.Add(hotkeyGroup, 0, 4);
+            layout.Controls.Add(hotkeyGroup, 0, 5);
 
             List<HotkeyDefinition> definitions = HotkeySettingsStore.Load();
+            hotkeyGroup.Height = Math.Max(330, 58 + definitions.Count * 28);
             TableLayoutPanel hotkeys = new TableLayoutPanel();
             hotkeys.Dock = DockStyle.Fill;
             hotkeys.Padding = new Padding(12);
@@ -4724,7 +5079,7 @@ namespace NoNoStandalone
             actions.Controls.Add(saveButton);
             actions.Controls.Add(resetButton);
             actions.Controls.Add(status);
-            layout.Controls.Add(actions, 0, 5);
+            layout.Controls.Add(actions, 0, 6);
 
             Action saveNotesRoot = delegate
             {
@@ -6690,6 +7045,9 @@ namespace NoNoStandalone
         public Bitmap Image;
         public string ImagePath;
         public string OcrText;
+        public string OcrEngine;
+        public string OcrVersion;
+        public string OcrError;
         public long Length;
         public DateTime CreatedAt;
         public string Signature;
@@ -6766,6 +7124,9 @@ namespace NoNoStandalone
                         item.ImagePath = Path.Combine(ImagesRoot, row[3]);
                         item.OcrText = row.Length >= 5 ? row[4] : "";
                         item.Signature = row.Length >= 6 ? row[5] : "";
+                        item.OcrVersion = row.Length >= 7 ? row[6] : "legacy-windows-ocr";
+                        item.OcrEngine = row.Length >= 8 ? row[7] : "Windows OCR";
+                        item.OcrError = row.Length >= 9 ? row[8] : "";
                         if (File.Exists(item.ImagePath))
                         {
                             ImageItems.Add(item);
@@ -6839,7 +7200,7 @@ namespace NoNoStandalone
                             item.Signature = signature;
                             item.ImagePath = Path.Combine(ImagesRoot, "clip-" + item.CreatedAt.Ticks.ToString(CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N") + ".png");
                             File.WriteAllBytes(item.ImagePath, data);
-                            item.OcrText = ImageTextRecognizer.TryRecognize(copy);
+                            ApplyOcrResult(item, ClipboardImageOcrService.Recognize(copy));
                             ImageItems.Insert(0, item);
                             lastClipboardSignature = signature;
                             SaveNoLock();
@@ -6951,6 +7312,7 @@ namespace NoNoStandalone
         {
             string imagePath = null;
             bool retained = false;
+            ClipboardHistoryItem item = null;
             try
             {
                 byte[] data = ImageToPngBytes(copy);
@@ -6966,7 +7328,6 @@ namespace NoNoStandalone
                 Directory.CreateDirectory(ImagesRoot);
                 imagePath = Path.Combine(ImagesRoot, "clip-" + capturedAt.Ticks.ToString(CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N") + ".png");
                 File.WriteAllBytes(imagePath, data);
-                string ocrText = ImageTextRecognizer.TryRecognizeFile(imagePath);
 
                 lock (Gate)
                 {
@@ -6976,14 +7337,13 @@ namespace NoNoStandalone
                         return false;
                     }
 
-                    ClipboardHistoryItem item = new ClipboardHistoryItem();
+                    item = new ClipboardHistoryItem();
                     item.Kind = "图片";
                     item.Image = copy;
                     item.Length = data.Length;
                     item.CreatedAt = capturedAt;
                     item.Signature = signature;
                     item.ImagePath = imagePath;
-                    item.OcrText = ocrText;
                     ImageItems.Insert(0, item);
                     lastClipboardSignature = signature;
                     retained = true;
@@ -6991,6 +7351,8 @@ namespace NoNoStandalone
                 }
 
                 RaiseChanged();
+                // Keep the clipboard row responsive; OCR is supplemental and may load models.
+                StartImageOcr(item, imagePath);
                 return true;
             }
             catch
@@ -7005,6 +7367,50 @@ namespace NoNoStandalone
                     copy.Dispose();
                 }
             }
+        }
+
+        private static void StartImageOcr(ClipboardHistoryItem item, string imagePath)
+        {
+            if (item == null || String.IsNullOrWhiteSpace(imagePath))
+            {
+                return;
+            }
+
+            Task.Run<ClipboardOcrResult>(delegate
+            {
+                return ClipboardImageOcrService.RecognizeFile(imagePath);
+            }).ContinueWith(
+                delegate(Task<ClipboardOcrResult> completed)
+                {
+                    ClipboardOcrResult result;
+                    if (completed.Status == TaskStatus.RanToCompletion)
+                    {
+                        result = completed.Result;
+                    }
+                    else
+                    {
+                        result = new ClipboardOcrResult();
+                        result.Error = completed.Exception == null
+                            ? "OCR task did not complete."
+                            : completed.Exception.GetBaseException().Message;
+                    }
+
+                    lock (Gate)
+                    {
+                        if (!ImageItems.Contains(item))
+                        {
+                            return;
+                        }
+
+                        ApplyOcrResult(item, result);
+                        SaveNoLock();
+                    }
+
+                    RaiseChanged();
+                },
+                System.Threading.CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
 
         public static Bitmap EnsureImageLoaded(ClipboardHistoryItem item)
@@ -7029,6 +7435,41 @@ namespace NoNoStandalone
 
                 return item.Image;
             }
+        }
+
+        public static Task<bool> ReRecognizeAsync(ClipboardHistoryItem item)
+        {
+            EnsureLoaded();
+            if (item == null || String.IsNullOrWhiteSpace(item.ImagePath))
+            {
+                return Task.FromResult(false);
+            }
+
+            string imagePath;
+            lock (Gate)
+            {
+                if (!ImageItems.Contains(item))
+                {
+                    return Task.FromResult(false);
+                }
+                imagePath = item.ImagePath;
+            }
+
+            return Task.Run<bool>(delegate
+            {
+                ClipboardOcrResult result = ClipboardImageOcrService.RecognizeFile(imagePath);
+                lock (Gate)
+                {
+                    if (!ImageItems.Contains(item))
+                    {
+                        return false;
+                    }
+                    ApplyOcrResult(item, result);
+                    SaveNoLock();
+                }
+                RaiseChanged();
+                return true;
+            });
         }
 
         private static void TryDeleteClipboardFile(string path)
@@ -7114,12 +7555,27 @@ namespace NoNoStandalone
                         item.Length.ToString(CultureInfo.InvariantCulture),
                         item.ImagePath == null ? "" : Path.GetFileName(item.ImagePath),
                         item.OcrText ?? "",
-                        item.Signature ?? ""
+                        item.Signature ?? "",
+                        item.OcrVersion ?? "",
+                        item.OcrEngine ?? "",
+                        item.OcrError ?? ""
                     });
                 }
             }
 
             PanelStorage.SaveRows(HistoryFile, rows);
+        }
+
+        private static void ApplyOcrResult(ClipboardHistoryItem item, ClipboardOcrResult result)
+        {
+            if (item == null)
+            {
+                return;
+            }
+            item.OcrText = result == null ? "" : result.Text ?? "";
+            item.OcrEngine = result == null ? "" : result.Engine ?? "";
+            item.OcrVersion = result == null ? ClipboardImageOcrService.CurrentVersion : result.Version ?? "";
+            item.OcrError = result == null ? "OCR 未返回结果。" : result.Error ?? "";
         }
 
         private static void SortNoLock()
@@ -8815,6 +9271,7 @@ $result.Text";
 
         public static bool Validate(List<HotkeyDefinition> definitions, out string message)
         {
+            Dictionary<long, HotkeyDefinition> usedGestures = new Dictionary<long, HotkeyDefinition>();
             for (int i = 0; i < definitions.Count; i++)
             {
                 if (!definitions[i].Enabled)
@@ -8829,6 +9286,16 @@ $result.Text";
                     message = definitions[i].Label + " 的快捷键无效。";
                     return false;
                 }
+
+                long gestureId = ((long)modifiers << 32) | key;
+                HotkeyDefinition duplicate;
+                if (usedGestures.TryGetValue(gestureId, out duplicate))
+                {
+                    message = definitions[i].Label + " 与 " + duplicate.Label + " 使用了相同的快捷键。";
+                    return false;
+                }
+
+                usedGestures.Add(gestureId, definitions[i]);
             }
 
             message = "";
@@ -8852,6 +9319,10 @@ $result.Text";
         {
             return new List<HotkeyDefinition>
             {
+                new HotkeyDefinition("screen-translation", "翻译框选区域", "Ctrl+Alt+T", "启动或停止框选区域翻译。", true),
+                new HotkeyDefinition("toggle-desktop-icons", "隐藏桌面图标", "Ctrl+Alt+H", "切换桌面图标的显示状态。", true),
+                new HotkeyDefinition("toggle-taskbar", "隐藏任务栏", "Ctrl+Alt+B", "切换任务栏的显示状态。", true),
+                new HotkeyDefinition("empty-recycle-bin", "清空回收站", "Ctrl+Alt+E", "确认后清空 Windows 回收站。", true),
                 new HotkeyDefinition("show-panel", "打开面板", "Ctrl+Alt+Space", "显示或聚焦诺诺面板。", true),
                 new HotkeyDefinition(QuickLaunchAction, "快速直达", QuickLaunchDefaultGesture, "弹出小窗口，输入关键词、网址、路径或命令后回车直达。", true),
                 new HotkeyDefinition("show-desktop", "回桌面", "Ctrl+Alt+D", "最小化所有窗口，直接回到桌面。", true),
@@ -11298,6 +11769,11 @@ $result.Text";
                     return 6;
                 }
 
+                if (!ScreenTranslationSelfTest.RunLightweight())
+                {
+                    return 9;
+                }
+
                 if (!PetMenuMouseMessageFilter.IsBlockedMessage(0x0204) ||
                     !PetMenuMouseMessageFilter.IsBlockedMessage(0x0205) ||
                     !PetMenuMouseMessageFilter.IsBlockedMessage(0x0207) ||
@@ -11329,6 +11805,7 @@ $result.Text";
         public const int WS_EX_LAYERED = 0x00080000;
         public const int CS_DROPSHADOW = 0x00020000;
         public const int WM_NCHITTEST = 0x0084;
+        public const int WM_CLIPBOARDUPDATE = 0x031D;
         public const int HTCLIENT = 1;
         public const int HTTRANSPARENT = -1;
         private const int VK_RBUTTON = 0x02;
@@ -11396,6 +11873,12 @@ $result.Text";
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool AddClipboardFormatListener(IntPtr hwnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool RemoveClipboardFormatListener(IntPtr hwnd);
+
         [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
@@ -11420,6 +11903,32 @@ $result.Text";
         public static bool IsRightButtonDown()
         {
             return (GetAsyncKeyState(VK_RBUTTON) & unchecked((short)0x8000)) != 0;
+        }
+
+        public static bool RegisterClipboardListener(IntPtr hwnd)
+        {
+            try
+            {
+                return hwnd != IntPtr.Zero && AddClipboardFormatListener(hwnd);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static void UnregisterClipboardListener(IntPtr hwnd)
+        {
+            try
+            {
+                if (hwnd != IntPtr.Zero)
+                {
+                    RemoveClipboardFormatListener(hwnd);
+                }
+            }
+            catch
+            {
+            }
         }
 
         public static void ShowDesktop()

@@ -5,7 +5,7 @@
       Manufacturer="NoNo Project"
       Version="$(var.ProductVersion)"
       Language="2052"
-      ProductCode="{F605E139-F22A-4F75-82FA-53F0BBCAD8A4}"
+      ProductCode="{7AB32CCA-8BA5-40F4-85D1-DEB892302227}"
       UpgradeCode="{8E65D65C-677E-454B-9F1E-73E9B935E982}"
       Scope="perUser"
       InstallerVersion="500"
@@ -28,6 +28,14 @@
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="InstallFolder" Name="NoNo">
         <Directory Id="VoiceFolder" Name="voice" />
+        <Directory Id="OcrModelsFolder" Name="ocr-models">
+          <Directory Id="OcrServerDetectionFolder" Name="PP-OCRv5_server_det_infer" />
+          <Directory Id="OcrServerRecognitionFolder" Name="PP-OCRv5_server_rec_infer" />
+          <Directory Id="OcrEnglishRecognitionFolder" Name="en_PP-OCRv5_mobile_rec_infer" />
+        </Directory>
+        <Directory Id="NativeFolder" Name="dll">
+          <Directory Id="NativeX64Folder" Name="x64" />
+        </Directory>
       </Directory>
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder">
@@ -58,12 +66,112 @@
       </File>
       <File Id="NoNoConfig" Source="$(var.AppDir)\NoNo-Standalone.exe.config" />
       <File Id="NoNoReadme" Source="$(var.DistDir)\NoNo-Standalone-README.txt" />
+      <File Id="ThirdPartyNotices" Source="$(var.AppDir)\THIRD-PARTY-NOTICES.txt" />
       <RemoveFolder Id="RemoveProgramMenuFolder" Directory="ProgramMenuFolderNoNo" On="uninstall" />
       <RemoveFolder Id="RemoveInstallFolder" Directory="InstallFolder" On="uninstall" />
       <RegistryValue
           Root="HKCU"
           Key="Software\NoNo Project\NoNo Desktop Pet"
           Name="ApplicationFiles"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="ScreenTranslationManagedRuntime" Directory="InstallFolder" Guid="{D1BFF9A3-5E9D-4A41-BFCE-EBA0FCF325EF}">
+      <File Id="OpenCvSharpManaged" Source="$(var.AppDir)\OpenCvSharp.dll" />
+      <File Id="PaddleInferenceManaged" Source="$(var.AppDir)\Sdcb.PaddleInference.dll" />
+      <File Id="PaddleOcrManaged" Source="$(var.AppDir)\Sdcb.PaddleOCR.dll" />
+      <File Id="PaddleOcrModelsLocal" Source="$(var.AppDir)\Sdcb.PaddleOCR.Models.Local.dll" />
+      <File Id="PaddleOcrModelsLocalV5" Source="$(var.AppDir)\Sdcb.PaddleOCR.Models.LocalV5.dll" />
+      <File Id="PaddleOcrModelsShared" Source="$(var.AppDir)\Sdcb.PaddleOCR.Models.Shared.dll" />
+      <File Id="SystemBuffers" Source="$(var.AppDir)\System.Buffers.dll" />
+      <File Id="SystemMemory" Source="$(var.AppDir)\System.Memory.dll" />
+      <File Id="SystemNumericsVectors" Source="$(var.AppDir)\System.Numerics.Vectors.dll" />
+      <File Id="SystemRuntimeCompilerServicesUnsafe" Source="$(var.AppDir)\System.Runtime.CompilerServices.Unsafe.dll" />
+      <File Id="YamlDotNet" Source="$(var.AppDir)\YamlDotNet.dll" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="ScreenTranslationManagedFiles"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="ScreenTranslationNativeRuntime" Directory="NativeX64Folder" Guid="{88D1A8E3-4DAA-44F0-9CE7-D13A14B658F8}">
+      <File Id="PaddleCommonNative" Source="$(var.AppDir)\dll\x64\common.dll" />
+      <File Id="OnnxRuntimeNative" Source="$(var.AppDir)\dll\x64\onnxruntime.dll" />
+      <File Id="OnnxRuntimeProvidersShared" Source="$(var.AppDir)\dll\x64\onnxruntime_providers_shared.dll" />
+      <File Id="IntelOpenMpNative" Source="$(var.AppDir)\dll\x64\libiomp5md.dll" />
+      <File Id="OneDnnNative" Source="$(var.AppDir)\dll\x64\mkldnn.dll" />
+      <File Id="MklMlNative" Source="$(var.AppDir)\dll\x64\mklml.dll" />
+      <File Id="OpenCvSharpExternNative" Source="$(var.AppDir)\dll\x64\OpenCvSharpExtern.dll" />
+      <File Id="Paddle2OnnxNative" Source="$(var.AppDir)\dll\x64\paddle2onnx.dll" />
+      <File Id="PaddleInferenceNative" Source="$(var.AppDir)\dll\x64\paddle_inference_c.dll" />
+      <File Id="PaddlePhiNative" Source="$(var.AppDir)\dll\x64\phi.dll" />
+      <RemoveFolder Id="RemoveNativeX64Folder" Directory="NativeX64Folder" On="uninstall" />
+      <RemoveFolder Id="RemoveNativeFolder" Directory="NativeFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="ScreenTranslationNativeFiles"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="ClipboardOcrModelMetadata" Directory="OcrModelsFolder" Guid="{48C169CC-3FC5-4F81-A798-17203509A19A}">
+      <File Id="ClipboardOcrModelReadme" Source="$(var.AppDir)\ocr-models\README.md" />
+      <RemoveFolder Id="RemoveOcrModelsFolder" Directory="OcrModelsFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="ClipboardOcrModelMetadata"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="ClipboardOcrServerDetectionModel" Directory="OcrServerDetectionFolder" Guid="{9E3B435D-85A3-46A8-96D0-3F22ADE04BC8}">
+      <File Id="ClipboardOcrDetJson" Source="$(var.AppDir)\ocr-models\PP-OCRv5_server_det_infer\inference.json" />
+      <File Id="ClipboardOcrDetParameters" Source="$(var.AppDir)\ocr-models\PP-OCRv5_server_det_infer\inference.pdiparams" />
+      <File Id="ClipboardOcrDetYaml" Source="$(var.AppDir)\ocr-models\PP-OCRv5_server_det_infer\inference.yml" />
+      <RemoveFolder Id="RemoveOcrServerDetectionFolder" Directory="OcrServerDetectionFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="ClipboardOcrServerDetectionModel"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="ClipboardOcrServerRecognitionModel" Directory="OcrServerRecognitionFolder" Guid="{4E59458F-267E-47CA-827D-63D8B6E7AE79}">
+      <File Id="ClipboardOcrRecJson" Source="$(var.AppDir)\ocr-models\PP-OCRv5_server_rec_infer\inference.json" />
+      <File Id="ClipboardOcrRecParameters" Source="$(var.AppDir)\ocr-models\PP-OCRv5_server_rec_infer\inference.pdiparams" />
+      <File Id="ClipboardOcrRecYaml" Source="$(var.AppDir)\ocr-models\PP-OCRv5_server_rec_infer\inference.yml" />
+      <File Id="ClipboardOcrRecDictionary" Source="$(var.AppDir)\ocr-models\PP-OCRv5_server_rec_infer\ppocrv5_server_dict.txt" />
+      <RemoveFolder Id="RemoveOcrServerRecognitionFolder" Directory="OcrServerRecognitionFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="ClipboardOcrServerRecognitionModel"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="ClipboardOcrEnglishRecognitionModel" Directory="OcrEnglishRecognitionFolder" Guid="{C5355087-B713-4375-9AA5-2798D032B28E}">
+      <File Id="ClipboardOcrEnglishRecJson" Source="$(var.AppDir)\ocr-models\en_PP-OCRv5_mobile_rec_infer\inference.json" />
+      <File Id="ClipboardOcrEnglishRecParameters" Source="$(var.AppDir)\ocr-models\en_PP-OCRv5_mobile_rec_infer\inference.pdiparams" />
+      <File Id="ClipboardOcrEnglishRecYaml" Source="$(var.AppDir)\ocr-models\en_PP-OCRv5_mobile_rec_infer\inference.yml" />
+      <File Id="ClipboardOcrEnglishRecDictionary" Source="$(var.AppDir)\ocr-models\en_PP-OCRv5_mobile_rec_infer\en_ppocrv5_dict.txt" />
+      <RemoveFolder Id="RemoveOcrEnglishRecognitionFolder" Directory="OcrEnglishRecognitionFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\NoNo Project\NoNo Desktop Pet"
+          Name="ClipboardOcrEnglishRecognitionModel"
           Type="integer"
           Value="1"
           KeyPath="yes" />
@@ -89,6 +197,12 @@
 
     <Feature Id="MainFeature" Title="NoNo Desktop Pet" Level="1">
       <ComponentRef Id="MainApplication" />
+      <ComponentRef Id="ScreenTranslationManagedRuntime" />
+      <ComponentRef Id="ScreenTranslationNativeRuntime" />
+      <ComponentRef Id="ClipboardOcrModelMetadata" />
+      <ComponentRef Id="ClipboardOcrServerDetectionModel" />
+      <ComponentRef Id="ClipboardOcrServerRecognitionModel" />
+      <ComponentRef Id="ClipboardOcrEnglishRecognitionModel" />
       <ComponentRef Id="VoiceRuntimeScripts" />
     </Feature>
 
